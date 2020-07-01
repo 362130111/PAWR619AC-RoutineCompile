@@ -57,7 +57,7 @@ jobs:
 
       - name: Generate configuration file
         run: |
-          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/PAWR619AC.config > ./.config
+          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/PAWR619AC.config.muggle > ./.config
           make defconfig
 
       - name: Make download
