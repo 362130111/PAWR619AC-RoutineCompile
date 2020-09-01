@@ -59,17 +59,13 @@ jobs:
 
       - name: Generate configuration file
         run: |
-          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/PAWR619AC.config.muggle > ./.config
+          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/PAWR619AC.config > ./.config
           make defconfig
 
       - name: Make download
         run: |
           make download -j8 || make download
           find ./dl/ -size -1024c -exec rm -f {} \;
-
-      - name: Custom firmware
-        run: |
-          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/dhcp.conf > ./package/network/services/dnsmasq/files/dhcp.conf
 
       - name: Compile firmware
         run: |
