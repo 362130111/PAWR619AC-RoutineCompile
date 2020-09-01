@@ -69,7 +69,7 @@ jobs:
 
       - name: Custom firmware
         run: |
-          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/dhcp.conf > ./package/network/services/dnsmasq/files/dhcp.conf
+          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/dhcp.conf > ./package/network/services/dnsmasq/files/dhcp.conf
 
       - name: Compile firmware
         run: |
