@@ -23,10 +23,15 @@ jobs:
 
     steps:
 
-      - name: Checkout
+      - name: Load OpenWrt source
         uses: actions/checkout@v2
         with:
           repository: KFERMercer/OpenWrt
+          ref: master
+
+      - name: Checkout config
+        uses: actions/checkout@v2
+        with:
           ref: master
 
       - name: Space cleanup
@@ -59,7 +64,7 @@ jobs:
 
       - name: Generate configuration file
         run: |
-          wget -q -O - https://raw.githubusercontent.com/362130111/PAWR619AC-RoutineCompile/master/makeconfig/PAWR619AC.config > ./.config
+          cp ./makeconfig/PAWR619AC.config ./.config
           make defconfig
 
       - name: Make download
