@@ -4,12 +4,12 @@
 # <https://github.com/KFERMercer/OpenWrt-CI>
 #
 
-name: OpenWrt-CI
+name: CI-Newifi-D2
 
 on:
   push:
     branches:
-      - master
+      - projectBIG
   schedule:
     - cron: 0 0 1 * *
   release:
@@ -23,17 +23,21 @@ jobs:
 
     steps:
 
-      - name: Load OpenWrt source
-        uses: actions/checkout@v2
-        with:
-          repository: KFERMercer/OpenWrt
-          ref: master
+      # - name: Load OpenWrt source
+      #   uses: actions/checkout@v2
+      #   with:
+      #     repository: KFERMercer/OpenWrt
+      #     ref: master
 
       - name: Checkout config
         uses: actions/checkout@v2
         with:
           ref: master
           path: tmp/config.rc
+
+      - name: Unload OpenWrt-src
+        run: |
+          tar -zxvf ./tmp/config.rc/OpenWrt-src.tar.gz
 
       - name: Space cleanup
         env:
@@ -65,7 +69,7 @@ jobs:
 
       - name: Generate configuration file
         run: |
-          cp ./tmp/config.rc/makeconfig/PAWR619AC.config ./.config
+          cp ./tmp/config.rc/makeconfig/Newifi-D2.config ./.config
           make defconfig
 
       - name: Make download
@@ -111,11 +115,11 @@ jobs:
           name: OpenWrt_firmware
           path: ./bin/targets/
 
-      - name: Upload release asset
-        if: github.event == 'release'
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.YOURTOKEN }}
-          file: ./artifact/firmware/*
-          tag: ${{ github.ref }}
-          file_glob: true
+      # - name: Upload release asset
+      #   if: github.event == 'release'
+      #   uses: svenstaro/upload-release-action@v2
+      #   with:
+      #     repo_token: ${{ secrets.YOURTOKEN }}
+      #     file: ./artifact/firmware/*
+      #     tag: ${{ github.ref }}
+      #     file_glob: true
