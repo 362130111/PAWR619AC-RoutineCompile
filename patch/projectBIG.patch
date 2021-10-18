@@ -1,6 +1,6 @@
 diff -uNr -x .git /home/mercer/OpenWrt/include/target.mk ./include/target.mk
---- /home/mercer/OpenWrt/include/target.mk	2021-10-17 05:32:40.629765900 +0800
-+++ ./include/target.mk	2021-10-17 19:48:46.514380400 +0800
+--- /home/mercer/OpenWrt/include/target.mk	2021-10-18 14:44:40.522530342 +0800
++++ ./include/target.mk	2021-10-18 15:00:07.403744214 +0800
 @@ -48,8 +48,8 @@
  	ppp-mod-pppoe \
  	luci-newapi block-mount coremark kmod-nf-nathelper kmod-nf-nathelper-extra kmod-ipt-raw \
@@ -12,9 +12,87 @@ diff -uNr -x .git /home/mercer/OpenWrt/include/target.mk ./include/target.mk
  	luci-app-turboacc luci-app-nlbwmon luci-app-accesscontrol ddns-scripts_aliyun ddns-scripts_dnspod
  
  ifneq ($(DUMP),)
+diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua ./package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua
+--- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua	1970-01-01 08:00:00.000000000 +0800
++++ ./package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua	2021-10-18 15:00:07.403744214 +0800
+@@ -0,0 +1,22 @@
++--[[
++vhusbd Luci configuration page.Made by 981213
++]]--
++
++module("luci.controller.vhusbd", package.seeall)
++
++function index()
++	
++	if not nixio.fs.access("/etc/config/vhusbd") then
++		return
++	end
++	
++	entry({"admin", "services", "vhusbd", "status"}, call("vhusbd_status")).leaf = true
++	entry({"admin", "services", "vhusbd"}, cbi("vhusbd"), _("VirtualHere"), 46).dependent = true
++end
++
++function vhusbd_status()
++	local status = {}
++	status.running = luci.sys.call("pgrep vhusbd >/dev/null")==0
++	luci.http.prepare_content("application/json")
++	luci.http.write_json(status)
++end
+diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua ./package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua
+--- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua	1970-01-01 08:00:00.000000000 +0800
++++ ./package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua	2021-10-18 15:00:07.403744214 +0800
+@@ -0,0 +1,24 @@
++--[[
++--vhusbd configuration page. Made by 981213
++--
++]] --
++local fs = require "nixio.fs"
++
++
++m = Map("vhusbd", translate("VirtualHere USB Server"), translatef(
++            "可把网络设备上的USB设备映射到本地主机。启用后到 http://www.virtualhere.com/usb_client_software 下载对应构架的客户端到本地主机运行。<br />注册(x86无效)：在客户端的USB共享器上右键-设备信息-输入许可码(xxxxxxxxxxxx为设备信息中的s/n)：xxxxxxxxxxxx,999,MCACDkn0jww6R5WOIjFqU/apAg4Um+mDkU2TBcC7fA1FrA=="))
++
++-- Basic config
++m:section(SimpleSection).template = "vhusbd/status"
++
++-- vhusbd
++s = m:section(TypedSection, "vhusbd", translate("Settings"))
++s.anonymous = true
++
++switch = s:option(Flag, "enabled", translate("Enable"))
++switch.rmempty = false
++
++Access = s:option(Flag, "ExtAccess", translate("外网访问"))
++Access.rmempty = false
++
++return m
+diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm ./package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm
+--- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm	1970-01-01 08:00:00.000000000 +0800
++++ ./package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm	2021-10-18 15:00:07.403744214 +0800
+@@ -0,0 +1,20 @@
++<script type="text/javascript">//<![CDATA[
++XHR.poll(5, '<%=url([[admin]], [[services]], [[vhusbd]], [[status]])%>', null,
++    function(x, data) {
++        var status = document.getElementById('vhusbd_status');
++        if (data && status) {
++            if (data.running) {
++                status.innerHTML = "<em><b style='color:green;'>VirtualHere USB Server 正在运行</b></em>";
++            } else {
++                status.innerHTML = "<em><b style='color:red;'>VirtualHere USB Server 未运行</b></em>";
++            }
++        }
++    }
++);
++//]]>
++</script>
++<fieldset class="cbi-section">
++    <p id="vhusbd_status">
++        <em><%:Collecting data...%></em>
++    </p>
++</fieldset>
 diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/Makefile ./package/kferm/luci-app-virtualhere/Makefile
 --- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/Makefile	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/Makefile	2021-10-17 19:48:46.514380400 +0800
++++ ./package/kferm/luci-app-virtualhere/Makefile	2021-10-18 15:00:07.403744214 +0800
 @@ -0,0 +1,60 @@
 +#
 +# Copyright (C) 2008-2014 The LuCI Team <luci@lists.subsignal.org>
@@ -78,7 +156,7 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/Makefi
 +# call BuildPackage - OpenWrt buildroot signature
 diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/README.md ./package/kferm/luci-app-virtualhere/README.md
 --- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/README.md	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/README.md	2021-10-17 19:48:46.514380400 +0800
++++ ./package/kferm/luci-app-virtualhere/README.md	2021-10-18 15:00:07.407744069 +0800
 @@ -0,0 +1,7 @@
 +# luci-app-virtualhere
 +
@@ -87,94 +165,16 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/README
 +破解(x86无效)：在客户端的USB共享器上右键-设备信息-输入许可码(xxxxxxxxxxxx为设备信息中的s/n)：xxxxxxxxxxxx,999,MCACDkn0jww6R5WOIjFqU/apAg4Um+mDkU2TBcC7fA1FrA
 +
 +windows客户端设置中文方法：快捷方式中加入启动参数：--language=ZH-CN
-diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua ./package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua
---- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/luasrc/controller/vhusbd.lua	2021-10-17 19:48:46.514380400 +0800
-@@ -0,0 +1,22 @@
-+--[[
-+vhusbd Luci configuration page.Made by 981213
-+]]--
-+
-+module("luci.controller.vhusbd", package.seeall)
-+
-+function index()
-+	
-+	if not nixio.fs.access("/etc/config/vhusbd") then
-+		return
-+	end
-+	
-+	entry({"admin", "services", "vhusbd", "status"}, call("vhusbd_status")).leaf = true
-+	entry({"admin", "services", "vhusbd"}, cbi("vhusbd"), _("VirtualHere"), 46).dependent = true
-+end
-+
-+function vhusbd_status()
-+	local status = {}
-+	status.running = luci.sys.call("pgrep vhusbd >/dev/null")==0
-+	luci.http.prepare_content("application/json")
-+	luci.http.write_json(status)
-+end
-diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua ./package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua
---- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/luasrc/model/cbi/vhusbd.lua	2021-10-17 19:48:46.514380400 +0800
-@@ -0,0 +1,24 @@
-+--[[
-+--vhusbd configuration page. Made by 981213
-+--
-+]] --
-+local fs = require "nixio.fs"
-+
-+
-+m = Map("vhusbd", translate("VirtualHere USB Server"), translatef(
-+            "可把网络设备上的USB设备映射到本地主机。启用后到 http://www.virtualhere.com/usb_client_software 下载对应构架的客户端到本地主机运行。<br />注册(x86无效)：在客户端的USB共享器上右键-设备信息-输入许可码(xxxxxxxxxxxx为设备信息中的s/n)：xxxxxxxxxxxx,999,MCACDkn0jww6R5WOIjFqU/apAg4Um+mDkU2TBcC7fA1FrA=="))
-+
-+-- Basic config
-+m:section(SimpleSection).template = "vhusbd/status"
-+
-+-- vhusbd
-+s = m:section(TypedSection, "vhusbd", translate("Settings"))
-+s.anonymous = true
-+
-+switch = s:option(Flag, "enabled", translate("Enable"))
-+switch.rmempty = false
-+
-+Access = s:option(Flag, "ExtAccess", translate("外网访问"))
-+Access.rmempty = false
-+
-+return m
-diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm ./package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm
---- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/luasrc/view/vhusbd/status.htm	2021-10-17 19:48:46.514380400 +0800
-@@ -0,0 +1,20 @@
-+<script type="text/javascript">//<![CDATA[
-+XHR.poll(5, '<%=url([[admin]], [[services]], [[vhusbd]], [[status]])%>', null,
-+    function(x, data) {
-+        var status = document.getElementById('vhusbd_status');
-+        if (data && status) {
-+            if (data.running) {
-+                status.innerHTML = "<em><b style='color:green;'>VirtualHere USB Server 正在运行</b></em>";
-+            } else {
-+                status.innerHTML = "<em><b style='color:red;'>VirtualHere USB Server 未运行</b></em>";
-+            }
-+        }
-+    }
-+);
-+//]]>
-+</script>
-+<fieldset class="cbi-section">
-+    <p id="vhusbd_status">
-+        <em><%:Collecting data...%></em>
-+    </p>
-+</fieldset>
 diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/config/vhusbd ./package/kferm/luci-app-virtualhere/root/etc/config/vhusbd
 --- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/config/vhusbd	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/root/etc/config/vhusbd	2021-10-17 19:48:46.514380400 +0800
++++ ./package/kferm/luci-app-virtualhere/root/etc/config/vhusbd	2021-10-18 15:00:07.407744069 +0800
 @@ -0,0 +1,3 @@
 +config vhusbd
 +	option enabled '0'
 +	option ExtAccess '0'
 diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/init.d/vhusbd ./package/kferm/luci-app-virtualhere/root/etc/init.d/vhusbd
 --- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/init.d/vhusbd	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/root/etc/init.d/vhusbd	2021-10-17 19:48:46.514380400 +0800
++++ ./package/kferm/luci-app-virtualhere/root/etc/init.d/vhusbd	2021-10-18 15:00:07.407744069 +0800
 @@ -0,0 +1,31 @@
 +#!/bin/sh /etc/rc.common
 +# Copyright (C) 2008-2020 OpenWrt.org
@@ -209,7 +209,7 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/e
 +}
 diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/uci-defaults/luci-vhusbd ./package/kferm/luci-app-virtualhere/root/etc/uci-defaults/luci-vhusbd
 --- /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/etc/uci-defaults/luci-vhusbd	1970-01-01 08:00:00.000000000 +0800
-+++ ./package/kferm/luci-app-virtualhere/root/etc/uci-defaults/luci-vhusbd	2021-10-17 19:48:46.514380400 +0800
++++ ./package/kferm/luci-app-virtualhere/root/etc/uci-defaults/luci-vhusbd	2021-10-18 15:00:07.407744069 +0800
 @@ -0,0 +1,11 @@
 +#!/bin/sh
 +
@@ -222,21 +222,9 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/kferm/luci-app-virtualhere/root/e
 +
 +rm -f /tmp/luci-indexcache
 +exit 0
-diff -uNr -x .git /home/mercer/OpenWrt/package/lean/default-settings/Makefile ./package/lean/default-settings/Makefile
---- /home/mercer/OpenWrt/package/lean/default-settings/Makefile	2021-10-17 05:32:40.629765900 +0800
-+++ ./package/lean/default-settings/Makefile	2021-10-17 19:48:46.514380400 +0800
-@@ -8,7 +8,7 @@
- 
- PKG_NAME:=default-settings
- PKG_VERSION:=2
--PKG_RELEASE:=20
-+PKG_RELEASE:=20-SPECIAL_MOD
- PKG_LICENSE:=GPLv3
- PKG_LICENSE_FILES:=LICENSE
- 
 diff -uNr -x .git /home/mercer/OpenWrt/package/lean/default-settings/files/zzz-default-settings ./package/lean/default-settings/files/zzz-default-settings
---- /home/mercer/OpenWrt/package/lean/default-settings/files/zzz-default-settings	2021-10-17 05:32:40.629765900 +0800
-+++ ./package/lean/default-settings/files/zzz-default-settings	2021-10-17 19:52:55.174380400 +0800
+--- /home/mercer/OpenWrt/package/lean/default-settings/files/zzz-default-settings	2021-10-18 14:44:40.570530024 +0800
++++ ./package/lean/default-settings/files/zzz-default-settings	2021-10-18 15:00:07.407744069 +0800
 @@ -15,6 +15,9 @@
  uci commit minidlna
  /etc/init.d/minidlna stop
@@ -256,9 +244,253 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/lean/default-settings/files/zzz-d
  sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
  echo "DISTRIB_DESCRIPTION='OpenWrt '" >> /etc/openwrt_release
  
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/default-settings/Makefile ./package/lean/default-settings/Makefile
+--- /home/mercer/OpenWrt/package/lean/default-settings/Makefile	2021-10-18 14:44:40.570530024 +0800
++++ ./package/lean/default-settings/Makefile	2021-10-18 15:00:07.407744069 +0800
+@@ -8,7 +8,7 @@
+ 
+ PKG_NAME:=default-settings
+ PKG_VERSION:=2
+-PKG_RELEASE:=20
++PKG_RELEASE:=20-SPECIAL_MOD
+ PKG_LICENSE:=GPLv3
+ PKG_LICENSE_FILES:=LICENSE
+ 
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/controller/docker.lua ./package/lean/luci-app-docker/luasrc/controller/docker.lua
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/controller/docker.lua	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/luasrc/controller/docker.lua	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,17 @@
++module("luci.controller.docker", package.seeall)
++
++function index()
++	if not nixio.fs.access("/etc/config/dockerd") then
++		return
++	end
++	
++	entry({"admin", "services", "docker"}, cbi("docker"), _("Docker CE Container"), 199).dependent = true
++	entry({"admin", "services", "docker", "status"}, call("act_status")).leaf = true
++end
++
++function act_status()
++	local e={}
++	e.running=luci.sys.call("pgrep /usr/bin/dockerd >/dev/null")==0
++	luci.http.prepare_content("application/json")
++	luci.http.write_json(e)
++end
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/model/cbi/docker.lua ./package/lean/luci-app-docker/luasrc/model/cbi/docker.lua
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/model/cbi/docker.lua	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/luasrc/model/cbi/docker.lua	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,23 @@
++local running = (luci.sys.call("pidof portainer >/dev/null") == 0)
++local button = ""
++
++if running then
++	button = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br /><input type=\"button\" value=\" " .. translate("Open Portainer Docker Admin") .. " \" onclick=\"window.open('http://'+window.location.hostname+':" .. 9999 .. "')\"/><br />"
++end
++
++m = Map("dockerd", "Docker CE", translate("Docker is a set of platform-as-a-service (PaaS) products that use OS-level virtualization to deliver software in packages called containers.") .. button)
++
++
++m:section(SimpleSection).template  = "docker/docker_status"
++
++s = m:section(TypedSection, "docker")
++s.anonymous = true
++
++wan_mode = s:option(Flag, "wan_mode", translate("Enable WAN access Docker"), translate("Enable WAN access docker mapped ports"))
++wan_mode.default = 0
++wan_mode.rmempty = false
++
++o=s:option(DummyValue,"readme",translate(" "))
++o.description=translate("<a href=\"../../../../DockerReadme.pdf\" target=\"_blank\" />"..translate("Download DockerReadme.pdf").."</a>")
++
++return m
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/view/docker/docker_status.htm ./package/lean/luci-app-docker/luasrc/view/docker/docker_status.htm
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/luasrc/view/docker/docker_status.htm	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/luasrc/view/docker/docker_status.htm	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,22 @@
++<script type="text/javascript">//<![CDATA[
++XHR.poll(3, '<%=url([[admin]], [[services]], [[docker]], [[status]])%>', null,
++	function(x, data) {
++		var tb = document.getElementById('docker_status');
++		if (data && tb) {
++			if (data.running) {
++				var links = '<em><b><font color=green>Docker CE <%:RUNNING%></font></b></em>';
++				tb.innerHTML = links;
++			} else {
++				tb.innerHTML = '<em><b><font color=red>Docker CE <%:NOT RUNNING%></font></b></em>';
++			}
++		}
++	}
++);
++//]]>
++</script>
++<style>.mar-10 {margin-left: 50px; margin-right: 10px;}</style>
++<fieldset class="cbi-section">
++	<p id="docker_status">
++		<em><%:Collecting data...%></em>
++	</p>
++</fieldset>
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/Makefile ./package/lean/luci-app-docker/Makefile
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/Makefile	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/Makefile	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,18 @@
++#
++# Copyright (C) 2008-2014 The LuCI Team <luci@lists.subsignal.org>
++#
++# This is free software, licensed under the Apache License, Version 2.0 .
++#
++
++include $(TOPDIR)/rules.mk
++
++LUCI_TITLE:=Luci for Docker-CE
++LUCI_DEPENDS:=+dockerd +docker +e2fsprogs +fdisk
++LUCI_PKGARCH:=all
++PKG_VERSION:=1
++PKG_RELEASE:=12
++
++include $(TOPDIR)/feeds/luci/luci.mk
++
++# call BuildPackage - OpenWrt buildroot signature
++
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/po/zh-cn/docker.po ./package/lean/luci-app-docker/po/zh-cn/docker.po
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/po/zh-cn/docker.po	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/po/zh-cn/docker.po	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,39 @@
++msgid ""
++msgstr ""
++"Project-Id-Version: Luci ARP Bind\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2015-06-23 20:16+0800\n"
++"PO-Revision-Date: 2015-06-23 20:17+0800\n"
++"Last-Translator: coolsnowwolf <coolsnowwolf@gmail.com>\n"
++"Language-Team: PandoraBox Team\n"
++"Language: zh_CN\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=1; plural=0;\n"
++"X-Generator: Poedit 1.8.1\n"
++"X-Poedit-SourceCharset: UTF-8\n"
++
++msgid "Docker CE Container"
++msgstr "Docker CE 容器"
++
++msgid "Open Portainer Docker Admin"
++msgstr "打开 Portainer Docker 管理页面"
++
++msgid "Docker is a set of platform-as-a-service (PaaS) products that use OS-level virtualization to deliver software in packages called containers."
++msgstr "Docker是一组平台即服务（platform-as-a-service，PaaS）产品，它使用操作系统级容器虚拟化来交付软件包。"
++
++msgid "Enable WAN access Docker"
++msgstr "允许 WAN 访问 Docker"
++
++msgid "Enable WAN access docker mapped ports"
++msgstr "允许 WAN 访问 Docker 映射后的端口（易受攻击！）。<br /><br />推荐禁用该选项后，用系统防火墙选择性映射 172.17.0.X:XX 端口到 WAN"
++
++msgid "Docker Readme First"
++msgstr "Docker 初始化无脑配置教程"
++
++msgid "Download DockerReadme.pdf"
++msgstr "下载 Docker 初始化无脑配置教程"
++
++msgid "Please download DockerReadme.pdf to read when first-running"
++msgstr "初次在OpenWrt中运行Docker必读（只需执行一次流程）"
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/config/dockerd ./package/lean/luci-app-docker/root/etc/config/dockerd
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/config/dockerd	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/config/dockerd	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,4 @@
++
++config docker
++	option wan_mode '0'
++
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker/daemon.json ./package/lean/luci-app-docker/root/etc/docker/daemon.json
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker/daemon.json	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/docker/daemon.json	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,4 @@
++{
++"data-root": "/opt/",
++"log-level": "warn"
++}
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker-init ./package/lean/luci-app-docker/root/etc/docker-init
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker-init	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/docker-init	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,25 @@
++#!/bin/sh
++dtype=`fdisk -l /dev/sda | grep 'Disklabel type' | awk '{print $3}'`
++partid="0"
++
++if [ "$dtype" = "gpt" ]
++then
++	partid=`echo "n
++
++
++
++w
++" | fdisk /dev/sda | grep 'Created a new partition' | awk '{print $5}'`
++
++elif [ "$dtype" = "dos" ]
++then
++	partid=`echo "n
++p
++
++
++
++w
++" | fdisk /dev/sda | grep 'Created a new partition' | awk '{print $5}'`
++fi
++
++echo "y" | mkfs.ext4 /dev/sda$partid
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker-web ./package/lean/luci-app-docker/root/etc/docker-web
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/docker-web	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/docker-web	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,3 @@
++#!/bin/sh
++
++docker run -d --restart=always --name="portainer" -p 9999:9000 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/init.d/dockerd ./package/lean/luci-app-docker/root/etc/init.d/dockerd
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/init.d/dockerd	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/init.d/dockerd	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,22 @@
++#!/bin/sh /etc/rc.common
++
++USE_PROCD=1
++START=25
++
++start_service() {
++	local nofile=$(cat /proc/sys/fs/nr_open)
++	local wanmode=$(uci get dockerd.@docker[0].wan_mode)
++	
++	if [ $wanmode = "1" ] ;then
++	dockerwan=" "
++	else
++	dockerwan="--iptables=false"
++  fi
++
++	procd_open_instance
++	procd_set_param stderr 1
++	procd_set_param command /usr/bin/dockerd $dockerwan
++	procd_set_param limits nofile="${nofile} ${nofile}"
++	procd_close_instance
++	
++}
+diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/uci-defaults/luci-docker ./package/lean/luci-app-docker/root/etc/uci-defaults/luci-docker
+--- /home/mercer/OpenWrt/package/lean/luci-app-docker/root/etc/uci-defaults/luci-docker	1970-01-01 08:00:00.000000000 +0800
++++ ./package/lean/luci-app-docker/root/etc/uci-defaults/luci-docker	2021-10-18 15:00:07.407744069 +0800
+@@ -0,0 +1,11 @@
++#!/bin/sh
++
++uci -q batch <<-EOF >/dev/null
++	delete ucitrack.@dockerd[-1]
++	add ucitrack dockerd
++	set ucitrack.@dockerd[-1].init=dockerd
++	commit ucitrack
++EOF
++
++rm -f /tmp/luci-indexcache
++exit 0
 diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-turboacc/Makefile ./package/lean/luci-app-turboacc/Makefile
---- /home/mercer/OpenWrt/package/lean/luci-app-turboacc/Makefile	2021-10-17 05:32:40.629765900 +0800
-+++ ./package/lean/luci-app-turboacc/Makefile	2021-10-17 19:48:46.514380400 +0800
+--- /home/mercer/OpenWrt/package/lean/luci-app-turboacc/Makefile	2021-10-18 14:44:40.638529577 +0800
++++ ./package/lean/luci-app-turboacc/Makefile	2021-10-18 15:00:07.407744069 +0800
 @@ -6,7 +6,7 @@
  include $(TOPDIR)/rules.mk
  
@@ -269,8 +501,8 @@ diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-turboacc/Makefile .
  PKG_LICENSE:=GPL-3.0-only
  PKG_MAINTAINER:=Tianling Shen <cnsztl@immortalwrt.org>
 diff -uNr -x .git /home/mercer/OpenWrt/package/lean/luci-app-turboacc/root/etc/config/turboacc ./package/lean/luci-app-turboacc/root/etc/config/turboacc
---- /home/mercer/OpenWrt/package/lean/luci-app-turboacc/root/etc/config/turboacc	2021-10-17 05:32:40.629765900 +0800
-+++ ./package/lean/luci-app-turboacc/root/etc/config/turboacc	2021-10-17 19:48:46.514380400 +0800
+--- /home/mercer/OpenWrt/package/lean/luci-app-turboacc/root/etc/config/turboacc	2021-10-18 14:44:40.638529577 +0800
++++ ./package/lean/luci-app-turboacc/root/etc/config/turboacc	2021-10-18 15:00:07.407744069 +0800
 @@ -1,10 +1,10 @@
  
  config turboacc 'config'
